@@ -2,14 +2,21 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.scene.control.*;
-import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import java.sql.SQLException; // Pastikan ini ada untuk SQLException
 
 public class PeminjamanPanel extends BorderPane {
     private TableView<PeminjamanData> tablePeminjaman;
+    private TextField txtID, txtIDAnggota, txtIDBuku, txtTanggalPinjam, txtTanggalKembali;
+    private Label lblNamaAnggota, lblJudulBuku;
+    private Button btnSimpan, btnHapus, btnReset;
 
     public PeminjamanPanel() {
         // Form input di bagian atas
@@ -20,32 +27,34 @@ public class PeminjamanPanel extends BorderPane {
 
         // Label dan TextField untuk ID Peminjaman
         Label lblID = new Label("ID");
-        TextField txtID = new TextField();
+        txtID = new TextField();
+        txtID.setEditable(false); // ID tidak bisa diedit
 
         // Label dan TextField untuk ID Anggota
         Label lblIDAnggota = new Label("ID Anggota");
-        TextField txtIDAnggota = new TextField();
+        txtIDAnggota = new TextField();
         Button btnCariAnggota = new Button("Cari");
-        Label lblNamaAnggota = new Label("Nama Anggota");
+        lblNamaAnggota = new Label("Nama Anggota");
 
         // Label dan TextField untuk ID Buku
         Label lblIDBuku = new Label("ID Buku");
-        TextField txtIDBuku = new TextField();
+        txtIDBuku = new TextField();
         Button btnCariBuku = new Button("Cari");
-        Label lblJudulBuku = new Label("Judul Buku");
+        lblJudulBuku = new Label("Judul Buku");
 
         // Label dan TextField untuk tanggal pinjam dan kembali
         Label lblTanggalPinjam = new Label("Tanggal Pinjam");
-        TextField txtTanggalPinjam = new TextField();
+        txtTanggalPinjam = new TextField();
         txtTanggalPinjam.setPromptText("Format: YYYY/MM/DD");
 
         Label lblTanggalKembali = new Label("Tanggal Kembali");
-        TextField txtTanggalKembali = new TextField();
+        txtTanggalKembali = new TextField();
         txtTanggalKembali.setPromptText("Format: YYYY/MM/DD");
 
         // Tombol untuk aksi
-        Button btnSimpan = new Button("Simpan");
-        Button btnHapus = new Button("Hapus");
+        btnSimpan = new Button("Simpan");
+        btnHapus = new Button("Hapus");
+        btnReset = new Button("Reset");
 
         // Menambahkan elemen ke form
         form.add(lblID, 0, 0);
@@ -67,7 +76,7 @@ public class PeminjamanPanel extends BorderPane {
         form.add(lblTanggalKembali, 0, 4);
         form.add(txtTanggalKembali, 1, 4);
 
-        HBox buttonBox = new HBox(10, btnSimpan, btnHapus);
+        HBox buttonBox = new HBox(10, btnSimpan, btnHapus, btnReset);
         buttonBox.setPadding(new Insets(10));
 
         // Tabel untuk daftar peminjaman
@@ -82,13 +91,13 @@ public class PeminjamanPanel extends BorderPane {
         colIDAnggota.setCellValueFactory(new PropertyValueFactory<>("idAnggota"));
         colIDAnggota.setPrefWidth(120);
 
-        TableColumn<PeminjamanData, Integer> colIDBuku = new TableColumn<>("ID Buku");
-        colIDBuku.setCellValueFactory(new PropertyValueFactory<>("idBuku"));
-        colIDBuku.setPrefWidth(120);
-
         TableColumn<PeminjamanData, String> colNamaAnggota = new TableColumn<>("Nama Anggota");
         colNamaAnggota.setCellValueFactory(new PropertyValueFactory<>("namaAnggota"));
         colNamaAnggota.setPrefWidth(200);
+
+        TableColumn<PeminjamanData, Integer> colIDBuku = new TableColumn<>("ID Buku");
+        colIDBuku.setCellValueFactory(new PropertyValueFactory<>("idBuku"));
+        colIDBuku.setPrefWidth(80);
 
         TableColumn<PeminjamanData, String> colJudulBuku = new TableColumn<>("Judul Buku");
         colJudulBuku.setCellValueFactory(new PropertyValueFactory<>("judulBuku"));
@@ -103,7 +112,7 @@ public class PeminjamanPanel extends BorderPane {
         colTanggalKembali.setPrefWidth(150);
 
         tablePeminjaman.getColumns().addAll(
-                colID, colIDAnggota, colIDBuku, colNamaAnggota, colJudulBuku, colTanggalPinjam, colTanggalKembali);
+                colID, colIDAnggota, colNamaAnggota, colIDBuku, colJudulBuku, colTanggalPinjam, colTanggalKembali);
 
         // Layout: Menempatkan form, tombol aksi dan tabel
         VBox centerBox = new VBox(10, form, buttonBox, tablePeminjaman);
@@ -113,40 +122,136 @@ public class PeminjamanPanel extends BorderPane {
 
         // Load data ke dalam tabel
         loadData();
+
+        // Menambahkan listener untuk memilih baris
+        tablePeminjaman.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue != null) {
+                // Mengisi form dengan data yang dipilih dari tabel
+                txtID.setText(String.valueOf(newValue.getId()));
+                txtIDAnggota.setText(String.valueOf(newValue.getIdAnggota()));
+                txtIDBuku.setText(String.valueOf(newValue.getIdBuku()));
+                txtTanggalPinjam.setText(newValue.getTanggalPinjam());
+                txtTanggalKembali.setText(newValue.getTanggalKembali());
+
+                // Menonaktifkan textField untuk ID peminjaman agar tidak bisa diubah
+                txtID.setEditable(false); // Menonaktifkan edit pada ID peminjaman
+            }
+        });
+
+        // Menambahkan aksi pada tombol simpan
+        btnSimpan.setOnAction(event -> {
+            if (txtID.getText().isEmpty()) {
+                // Jika ID kosong, berarti data baru
+                saveData(true);
+            } else {
+                // Jika ID tidak kosong, berarti update data yang ada
+                saveData(false);
+            }
+            // Tetap non-editable setelah simpan
+            txtID.setEditable(false);
+        });
+
+        // Aksi tombol Hapus
+        btnHapus.setOnAction(event -> {
+            PeminjamanData selectedData = tablePeminjaman.getSelectionModel().getSelectedItem();
+
+            // Mengecek jika ada baris yang dipilih
+            if (selectedData != null) {
+                // Menghapus data dari tabel
+                ObservableList<PeminjamanData> data = tablePeminjaman.getItems();
+                data.remove(selectedData);
+
+                // Menghapus data dari database
+                try (Connection connection = Database.getConnection()) {
+                    String query = "DELETE FROM peminjaman WHERE id_peminjaman = ?";
+                    try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+                        preparedStatement.setInt(1, selectedData.getId());
+                        preparedStatement.executeUpdate();
+                        System.out.println("Data berhasil dihapus.");
+                    }
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                    System.err.println("Terjadi kesalahan saat menghapus data.");
+                }
+
+                // Reset form input setelah penghapusan
+                txtID.clear();
+                txtIDAnggota.clear();
+                txtIDBuku.clear();
+                txtTanggalPinjam.clear();
+                txtTanggalKembali.clear();
+
+                // Menonaktifkan ID peminjaman setelah reset
+                txtID.setEditable(false);
+            }
+        });
+
+        // Aksi tombol Reset untuk mengosongkan form
+        btnReset.setOnAction(event -> {
+            txtID.clear();
+            txtIDAnggota.clear();
+            txtIDBuku.clear();
+            txtTanggalPinjam.clear();
+            txtTanggalKembali.clear();
+            txtID.setEditable(false); // Menonaktifkan ID agar tidak bisa diedit setelah reset
+        });
     }
 
     private void loadData() {
         ObservableList<PeminjamanData> data = FXCollections.observableArrayList();
         try (Connection connection = Database.getConnection();
-             Statement statement = connection.createStatement();
-             ResultSet resultSet = statement.executeQuery(
-                 "SELECT p.id_peminjaman AS ID, " +
-                 "p.id_anggota AS ID_Anggota, " +
-                 "p.id_buku AS ID_Buku, " +
-                 "a.nama AS Nama_Anggota, " +
-                 "b.judul AS Judul_Buku, " +
-                 "p.tanggal_pinjam AS Tanggal_Pinjam, " +
-                 "p.tanggal_kembali AS Tanggal_Kembali " +
-                 "FROM peminjaman p " +
-                 "JOIN anggota a ON p.id_anggota = a.id_anggota " +
-                 "JOIN buku b ON p.id_buku = b.id_buku"
-             )) {
-
+                Statement statement = connection.createStatement();
+                ResultSet resultSet = statement.executeQuery(
+                        "SELECT p.id_peminjaman AS ID, " +
+                                "p.id_anggota AS ID_Anggota, " +
+                                "a.nama AS Nama_Anggota, " +
+                                "p.id_buku AS ID_Buku, " +
+                                "b.judul AS Judul_Buku, " +
+                                "p.tanggal_pinjam AS Tanggal_Pinjam, " +
+                                "p.tanggal_kembali AS Tanggal_Kembali " +
+                                "FROM peminjaman p " +
+                                "JOIN anggota a ON p.id_anggota = a.id_anggota " +
+                                "JOIN buku b ON p.id_buku = b.id_buku")) {
             while (resultSet.next()) {
                 data.add(new PeminjamanData(
                         resultSet.getInt("ID"),
                         resultSet.getInt("ID_Anggota"),
-                        resultSet.getInt("ID_Buku"),
                         resultSet.getString("Nama_Anggota"),
+                        resultSet.getInt("ID_Buku"),
                         resultSet.getString("Judul_Buku"),
                         resultSet.getString("Tanggal_Pinjam"),
-                        resultSet.getString("Tanggal_Kembali")
-                ));
+                        resultSet.getString("Tanggal_Kembali")));
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
 
         tablePeminjaman.setItems(data);
+    }
+
+    private void saveData(boolean isNewData) {
+        try (Connection connection = Database.getConnection()) {
+            String query;
+            if (isNewData) {
+                query = "INSERT INTO peminjaman (id_anggota, id_buku, tanggal_pinjam, tanggal_kembali) VALUES (?, ?, ?, ?)";
+            } else {
+                query = "UPDATE peminjaman SET id_anggota = ?, id_buku = ?, tanggal_pinjam = ?, tanggal_kembali = ? WHERE id_peminjaman = ?";
+            }
+            try (var preparedStatement = connection.prepareStatement(query)) {
+                preparedStatement.setInt(1, Integer.parseInt(txtIDAnggota.getText()));
+                preparedStatement.setInt(2, Integer.parseInt(txtIDBuku.getText()));
+                preparedStatement.setString(3, txtTanggalPinjam.getText());
+                preparedStatement.setString(4, txtTanggalKembali.getText());
+
+                if (!isNewData) {
+                    preparedStatement.setInt(5, Integer.parseInt(txtID.getText()));
+                }
+
+                preparedStatement.executeUpdate();
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        loadData(); // Reload data after save
     }
 }

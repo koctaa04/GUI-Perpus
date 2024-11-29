@@ -1,24 +1,23 @@
 public class PeminjamanData {
     private int id;
-    private int idAnggota;  // Menambahkan idAnggota
-    private int idBuku;     // Menambahkan idBuku
+    private int idAnggota; // id Anggota bertipe int
     private String namaAnggota;
+    private int idBuku;  // id Buku bertipe int
     private String judulBuku;
     private String tanggalPinjam;
     private String tanggalKembali;
 
-    // Konstruktor dengan parameter lengkap
-    public PeminjamanData(int id, int idAnggota, int idBuku, String namaAnggota, String judulBuku, String tanggalPinjam, String tanggalKembali) {
+    public PeminjamanData(int id, int idAnggota, String namaAnggota, int idBuku, String judulBuku, String tanggalPinjam, String tanggalKembali) {
         this.id = id;
         this.idAnggota = idAnggota;
-        this.idBuku = idBuku;
         this.namaAnggota = namaAnggota;
+        this.idBuku = idBuku;
         this.judulBuku = judulBuku;
         this.tanggalPinjam = tanggalPinjam;
         this.tanggalKembali = tanggalKembali;
     }
 
-    // Getter untuk setiap field
+    // Getter dan setter
     public int getId() {
         return id;
     }
@@ -27,12 +26,12 @@ public class PeminjamanData {
         return idAnggota;
     }
 
-    public int getIdBuku() {
-        return idBuku;
-    }
-
     public String getNamaAnggota() {
         return namaAnggota;
+    }
+
+    public int getIdBuku() {
+        return idBuku;
     }
 
     public String getJudulBuku() {
