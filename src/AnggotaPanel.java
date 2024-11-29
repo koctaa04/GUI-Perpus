@@ -4,10 +4,10 @@ import javafx.geometry.Insets;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.Statement;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import javafx.beans.property.*;
 
 public class AnggotaPanel extends BorderPane {
@@ -45,7 +45,7 @@ public class AnggotaPanel extends BorderPane {
         btnHapus = new Button("Hapus");
         btnReset = new Button("Reset");
         txtCari = new TextField();
-        txtCari.setPromptText("Cari Anggota");
+        txtCari.setPromptText("Cari Nama Anggota");
         Button btnCari = new Button("Cari");
 
         // Menambahkan elemen ke form
@@ -69,7 +69,8 @@ public class AnggotaPanel extends BorderPane {
 
         // Kolom tabel
         TableColumn<AnggotaData, Integer> colIDAnggota = new TableColumn<>("ID Anggota");
-        colIDAnggota.setCellValueFactory(cellData -> new SimpleIntegerProperty(cellData.getValue().getIdAnggota()).asObject());
+        colIDAnggota.setCellValueFactory(
+                cellData -> new SimpleIntegerProperty(cellData.getValue().getIdAnggota()).asObject());
         colIDAnggota.setPrefWidth(100);
 
         TableColumn<AnggotaData, String> colNama = new TableColumn<>("Nama");
@@ -124,6 +125,17 @@ public class AnggotaPanel extends BorderPane {
 
         // Aksi tombol Reset
         btnReset.setOnAction(event -> resetForm());
+
+        // Aksi tombol Cari
+        btnCari.setOnAction(event -> {
+            String keyword = txtCari.getText();
+            if (keyword.isEmpty()) {
+                loadData(); // Jika pencarian kosong, tampilkan semua data
+            } else {
+                cariAnggota(keyword);
+            }
+        });
+
     }
 
     private void loadData() {
@@ -136,8 +148,7 @@ public class AnggotaPanel extends BorderPane {
                         resultSet.getInt("id_anggota"),
                         resultSet.getString("nama"),
                         resultSet.getString("alamat"),
-                        resultSet.getString("telepon")
-                ));
+                        resultSet.getString("telepon")));
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -194,5 +205,26 @@ public class AnggotaPanel extends BorderPane {
         txtAlamat.clear();
         txtTelepon.clear();
         txtIDAnggota.setEditable(true); // Mengaktifkan kembali ID agar bisa diisi saat menambah data baru
+    }
+
+    private void cariAnggota(String keyword) {
+        ObservableList<AnggotaData> data = FXCollections.observableArrayList();
+        try (Connection connection = Database.getConnection()) {
+            String query = "SELECT * FROM anggota WHERE nama LIKE ?";
+            PreparedStatement stmt = connection.prepareStatement(query);
+            stmt.setString(1, "%" + keyword + "%");
+            ResultSet rs = stmt.executeQuery();
+
+            while (rs.next()) {
+                data.add(new AnggotaData(
+                        rs.getInt("id_anggota"),
+                        rs.getString("nama"),
+                        rs.getString("alamat"),
+                        rs.getString("telepon")));
+            }
+            tableAnggota.setItems(data);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 }
