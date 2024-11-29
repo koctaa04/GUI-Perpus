@@ -3,14 +3,13 @@ import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
+import javafx.scene.control.cell.PropertyValueFactory;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;
-import javafx.scene.control.cell.PropertyValueFactory;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
-import java.sql.SQLException; // Pastikan ini ada untuk SQLException
+
+import java.sql.SQLException;
 
 public class PeminjamanPanel extends BorderPane {
     private TableView<PeminjamanData> tablePeminjaman;
@@ -83,13 +82,13 @@ public class PeminjamanPanel extends BorderPane {
         tablePeminjaman = new TableView<>();
 
         // Kolom tabel
-        TableColumn<PeminjamanData, Integer> colID = new TableColumn<>("ID");
-        colID.setCellValueFactory(new PropertyValueFactory<>("id"));
+        TableColumn<PeminjamanData, Integer> colID = new TableColumn<>("ID Peminjaman");
+        colID.setCellValueFactory(new PropertyValueFactory<>("idPeminjaman"));
         colID.setPrefWidth(80);
 
         TableColumn<PeminjamanData, Integer> colIDAnggota = new TableColumn<>("ID Anggota");
         colIDAnggota.setCellValueFactory(new PropertyValueFactory<>("idAnggota"));
-        colIDAnggota.setPrefWidth(120);
+        colIDAnggota.setPrefWidth(80);
 
         TableColumn<PeminjamanData, String> colNamaAnggota = new TableColumn<>("Nama Anggota");
         colNamaAnggota.setCellValueFactory(new PropertyValueFactory<>("namaAnggota"));
@@ -127,7 +126,7 @@ public class PeminjamanPanel extends BorderPane {
         tablePeminjaman.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue != null) {
                 // Mengisi form dengan data yang dipilih dari tabel
-                txtID.setText(String.valueOf(newValue.getId()));
+                txtID.setText(String.valueOf(newValue.getIdPeminjaman()));
                 txtIDAnggota.setText(String.valueOf(newValue.getIdAnggota()));
                 txtIDBuku.setText(String.valueOf(newValue.getIdBuku()));
                 txtTanggalPinjam.setText(newValue.getTanggalPinjam());
@@ -165,7 +164,7 @@ public class PeminjamanPanel extends BorderPane {
                 try (Connection connection = Database.getConnection()) {
                     String query = "DELETE FROM peminjaman WHERE id_peminjaman = ?";
                     try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
-                        preparedStatement.setInt(1, selectedData.getId());
+                        preparedStatement.setInt(1, selectedData.getIdPeminjaman());
                         preparedStatement.executeUpdate();
                         System.out.println("Data berhasil dihapus.");
                     }
@@ -195,63 +194,136 @@ public class PeminjamanPanel extends BorderPane {
             txtTanggalKembali.clear();
             txtID.setEditable(false); // Menonaktifkan ID agar tidak bisa diedit setelah reset
         });
-    }
 
-    private void loadData() {
-        ObservableList<PeminjamanData> data = FXCollections.observableArrayList();
-        try (Connection connection = Database.getConnection();
-                Statement statement = connection.createStatement();
-                ResultSet resultSet = statement.executeQuery(
-                        "SELECT p.id_peminjaman AS ID, " +
-                                "p.id_anggota AS ID_Anggota, " +
-                                "a.nama AS Nama_Anggota, " +
-                                "p.id_buku AS ID_Buku, " +
-                                "b.judul AS Judul_Buku, " +
-                                "p.tanggal_pinjam AS Tanggal_Pinjam, " +
-                                "p.tanggal_kembali AS Tanggal_Kembali " +
-                                "FROM peminjaman p " +
-                                "JOIN anggota a ON p.id_anggota = a.id_anggota " +
-                                "JOIN buku b ON p.id_buku = b.id_buku")) {
-            while (resultSet.next()) {
-                data.add(new PeminjamanData(
-                        resultSet.getInt("ID"),
-                        resultSet.getInt("ID_Anggota"),
-                        resultSet.getString("Nama_Anggota"),
-                        resultSet.getInt("ID_Buku"),
-                        resultSet.getString("Judul_Buku"),
-                        resultSet.getString("Tanggal_Pinjam"),
-                        resultSet.getString("Tanggal_Kembali")));
+        btnCariAnggota.setOnAction(event -> {
+            String idAnggota = txtIDAnggota.getText();
+            if (!idAnggota.isEmpty()) {
+                cariAnggota(idAnggota);
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        });
 
-        tablePeminjaman.setItems(data);
+        btnCariBuku.setOnAction(event -> {
+            String idBuku = txtIDBuku.getText();
+            if (!idBuku.isEmpty()) {
+                cariBuku(idBuku);
+            }
+        });
     }
 
-    private void saveData(boolean isNewData) {
+    private void saveData(boolean isNew) {
         try (Connection connection = Database.getConnection()) {
             String query;
-            if (isNewData) {
+            if (isNew) {
                 query = "INSERT INTO peminjaman (id_anggota, id_buku, tanggal_pinjam, tanggal_kembali) VALUES (?, ?, ?, ?)";
             } else {
                 query = "UPDATE peminjaman SET id_anggota = ?, id_buku = ?, tanggal_pinjam = ?, tanggal_kembali = ? WHERE id_peminjaman = ?";
             }
-            try (var preparedStatement = connection.prepareStatement(query)) {
+
+            try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
                 preparedStatement.setInt(1, Integer.parseInt(txtIDAnggota.getText()));
                 preparedStatement.setInt(2, Integer.parseInt(txtIDBuku.getText()));
                 preparedStatement.setString(3, txtTanggalPinjam.getText());
                 preparedStatement.setString(4, txtTanggalKembali.getText());
 
-                if (!isNewData) {
+                if (!isNew) {
                     preparedStatement.setInt(5, Integer.parseInt(txtID.getText()));
                 }
 
                 preparedStatement.executeUpdate();
+                System.out.println(isNew ? "Data berhasil disimpan." : "Data berhasil diperbarui.");
+                loadData(); // Reload data setelah penyimpanan
+
+                // Reset form input
+                txtID.clear();
+                txtIDAnggota.clear();
+                txtIDBuku.clear();
+                txtTanggalPinjam.clear();
+                txtTanggalKembali.clear();
+
+                txtID.setEditable(false); // Setelah simpan, ID tidak bisa diubah
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        loadData(); // Reload data after save
+    }
+
+    private void loadData() {
+        ObservableList<PeminjamanData> data = FXCollections.observableArrayList();
+        try (Connection connection = Database.getConnection()) {
+            String query = "SELECT \n" + //
+                                "    p.id_peminjaman AS id_peminjaman, \n" + //
+                                "    a.nama AS Nama_Anggota, \n" + //
+                                "    p.id_anggota as id_anggota, \n" + //
+                                "    b.judul AS Judul_Buku, \n" + //
+                                "    p.id_buku as id_buku, \n" + //
+                                "    p.tanggal_pinjam AS Tanggal_Pinjam, \n" + //
+                                "    p.tanggal_kembali AS Tanggal_Kembali\n" + //
+                                "FROM \n" + //
+                                "    peminjaman p\n" + //
+                                "JOIN \n" + //
+                                "    anggota a ON p.id_anggota = a.id_anggota\n" + //
+                                "JOIN \n" + //
+                                "    buku b ON p.id_buku = b.id_buku;";
+            try (Statement statement = connection.createStatement();
+                 ResultSet resultSet = statement.executeQuery(query)) {
+                while (resultSet.next()) {
+                    PeminjamanData peminjaman = new PeminjamanData(
+                            resultSet.getInt("id_peminjaman"),
+                            resultSet.getInt("id_anggota"),
+                            resultSet.getString("nama_anggota"),
+                            resultSet.getInt("id_buku"),
+                            resultSet.getString("judul_buku"),
+                            resultSet.getString("tanggal_pinjam"),
+                            resultSet.getString("tanggal_kembali"));
+                    data.add(peminjaman);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        tablePeminjaman.setItems(data);
+    }
+
+    private void resetForm() {
+        txtID.clear();
+        txtIDAnggota.clear();
+        txtIDBuku.clear();
+        txtTanggalPinjam.clear();
+        txtTanggalKembali.clear();
+        txtID.setEditable(false); // Non-editable untuk ID Peminjaman
+    }
+
+    private void cariAnggota(String idAnggota) {
+        try (Connection connection = Database.getConnection()) {
+            String query = "SELECT * FROM anggota WHERE id_anggota = ?";
+            try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+                preparedStatement.setString(1, idAnggota);
+                ResultSet resultSet = preparedStatement.executeQuery();
+                if (resultSet.next()) {
+                    lblNamaAnggota.setText(resultSet.getString("nama"));
+                } else {
+                    lblNamaAnggota.setText("Anggota tidak ditemukan.");
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void cariBuku(String idBuku) {
+        try (Connection connection = Database.getConnection()) {
+            String query = "SELECT * FROM buku WHERE id_buku = ?";
+            try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+                preparedStatement.setString(1, idBuku);
+                ResultSet resultSet = preparedStatement.executeQuery();
+                if (resultSet.next()) {
+                    lblJudulBuku.setText(resultSet.getString("judul"));
+                } else {
+                    lblJudulBuku.setText("Buku tidak ditemukan.");
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 }
