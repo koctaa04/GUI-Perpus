@@ -4,7 +4,7 @@ import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
-import javafx.scene.control.cell.PropertyValueFactory; // <-- Add this import
+import javafx.scene.control.cell.PropertyValueFactory; // Untuk PropertyValueFactory
 import java.sql.*;
 
 public class KategoriPanel extends BorderPane {
@@ -109,6 +109,16 @@ public class KategoriPanel extends BorderPane {
 
         // Aksi tombol Reset
         btnReset.setOnAction(event -> resetForm());
+
+        // Aksi tombol Cari
+        btnCari.setOnAction(event -> {
+            String keyword = txtCari.getText();
+            if (keyword.isEmpty()) {
+                loadData(); // Jika pencarian kosong, tampilkan semua data
+            } else {
+                cariKategori(keyword);
+            }
+        });
     }
 
     private void loadData() {
@@ -120,8 +130,7 @@ public class KategoriPanel extends BorderPane {
                 data.add(new KategoriData(
                         resultSet.getInt("id_kategori"),
                         resultSet.getString("nama"),
-                        resultSet.getString("keterangan")
-                ));
+                        resultSet.getString("keterangan")));
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -136,7 +145,7 @@ public class KategoriPanel extends BorderPane {
             PreparedStatement preparedStatement;
             if (txtIDKategori.getText().isEmpty()) {
                 // Insert new data
-                query = "INSERT INTO kategori (nama, keterangan) VALUES (?, ?)"; 
+                query = "INSERT INTO kategori (nama, keterangan) VALUES (?, ?)";
                 preparedStatement = connection.prepareStatement(query);
                 preparedStatement.setString(1, txtNamaKategori.getText());
                 preparedStatement.setString(2, txtKeterangan.getText());
@@ -175,5 +184,25 @@ public class KategoriPanel extends BorderPane {
         txtNamaKategori.clear();
         txtKeterangan.clear();
         txtIDKategori.setEditable(true); // Mengaktifkan kembali ID agar bisa diisi saat menambah data baru
+    }
+
+    private void cariKategori(String keyword) {
+        ObservableList<KategoriData> data = FXCollections.observableArrayList();
+        try (Connection connection = Database.getConnection()) {
+            String query = "SELECT * FROM kategori WHERE nama LIKE ?";
+            PreparedStatement stmt = connection.prepareStatement(query);
+            stmt.setString(1, "%" + keyword + "%");
+            ResultSet rs = stmt.executeQuery();
+
+            while (rs.next()) {
+                data.add(new KategoriData(
+                        rs.getInt("id_kategori"),
+                        rs.getString("nama"),
+                        rs.getString("keterangan")));
+            }
+            tableKategori.setItems(data);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 }
