@@ -2,129 +2,192 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
 import javafx.scene.control.*;
-import javafx.scene.layout.GridPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 
 import java.sql.*;
 
-public class BukuPanel extends VBox {
-    private TableView<BukuData> tableBuku;
-    private TextField txtJudul, txtPenulis, txtPenerbit, txtCari;
-    private ComboBox<String> cmbKategori;
-    private Button btnTambah, btnHapus, btnCari;
+public class BukuPanel extends BorderPane {
+
     private Connection connection;
+    private TableView<BukuData> tableBuku;
+    private TextField txtIDBuku, txtJudul, txtPenulis, txtPenerbit, txtCari;
+    private ComboBox<String> comboKategori;
+    private Button btnSimpan, btnHapus, btnReset, btnCari;
 
     public BukuPanel() {
-        // Initialize the database connection
-        connection = Database.getConnection();  // Assuming Database.getConnection() is defined
+        // Gunakan koneksi dari Database.java
+        connection = Database.getConnection();
 
-        // Form Input Buku
+        // Periksa apakah koneksi berhasil
+        if (connection != null) {
+            System.out.println("Koneksi berhasil.");
+        } else {
+            System.out.println("Koneksi ke database gagal.");
+        }
+
+        // Form input di bagian atas
         GridPane form = new GridPane();
+        form.setPadding(new Insets(10));
         form.setHgap(10);
         form.setVgap(10);
-        form.setPadding(new Insets(10));
 
+        // Label dan TextField untuk ID Buku
+        Label lblIDBuku = new Label("ID Buku");
+        txtIDBuku = new TextField();
+        txtIDBuku.setEditable(false); // ID Buku tidak bisa diedit
+
+        // Label dan ComboBox untuk Kategori
+        Label lblKategori = new Label("Kategori");
+        comboKategori = new ComboBox<>();
+        loadKategori(comboKategori); // Memuat kategori ke ComboBox
+
+        // Label dan TextField untuk Judul
+        Label lblJudul = new Label("Judul");
         txtJudul = new TextField();
-        txtPenulis = new TextField();
+
+        // Label dan TextField untuk Penerbit
+        Label lblPenerbit = new Label("Penerbit");
         txtPenerbit = new TextField();
-        cmbKategori = new ComboBox<>();
-        cmbKategori.setPrefWidth(200);
 
-        form.add(new Label("Judul:"), 0, 0);
-        form.add(txtJudul, 1, 0);
-        form.add(new Label("Penulis:"), 0, 1);
-        form.add(txtPenulis, 1, 1);
-        form.add(new Label("Penerbit:"), 0, 2);
-        form.add(txtPenerbit, 1, 2);
-        form.add(new Label("Kategori:"), 0, 3);
-        form.add(cmbKategori, 1, 3);
+        // Label dan TextField untuk Penulis
+        Label lblPenulis = new Label("Penulis");
+        txtPenulis = new TextField();
 
-        // Tombol
-        btnTambah = new Button("Tambah");
+        // Tombol untuk aksi
+        btnSimpan = new Button("Simpan");
         btnHapus = new Button("Hapus");
-        btnCari = new Button("Cari");
+        btnReset = new Button("Reset");
         txtCari = new TextField();
-        txtCari.setPromptText("Cari berdasarkan judul");
+        txtCari.setPromptText("Cari Judul Buku");
+        btnCari = new Button("Cari");
 
-        HBox buttonBox = new HBox(10, btnTambah, btnHapus, txtCari, btnCari);
+        // Menambahkan elemen ke form
+        form.add(lblIDBuku, 0, 0);
+        form.add(txtIDBuku, 1, 0);
+
+        form.add(lblKategori, 0, 1);
+        form.add(comboKategori, 1, 1);
+
+        form.add(lblJudul, 0, 2);
+        form.add(txtJudul, 1, 2);
+
+        form.add(lblPenerbit, 0, 3);
+        form.add(txtPenerbit, 1, 3);
+
+        form.add(lblPenulis, 0, 4);
+        form.add(txtPenulis, 1, 4);
+
+        HBox buttonBox = new HBox(10, btnSimpan, btnHapus, btnReset, txtCari, btnCari);
         buttonBox.setPadding(new Insets(10));
 
-        // Tabel Buku
+        // Tabel untuk daftar buku
         tableBuku = new TableView<>();
-        tableBuku.setPrefHeight(400);
 
+        // Kolom tabel
         TableColumn<BukuData, Integer> colID = new TableColumn<>("ID Buku");
-        colID.setCellValueFactory(new PropertyValueFactory<>("idBuku"));
         colID.setPrefWidth(100);
+        colID.setCellValueFactory(new PropertyValueFactory<>("idBuku"));
 
         TableColumn<BukuData, String> colKategori = new TableColumn<>("Kategori");
-        colKategori.setCellValueFactory(new PropertyValueFactory<>("kategori"));
         colKategori.setPrefWidth(150);
+        colKategori.setCellValueFactory(new PropertyValueFactory<>("kategori"));
 
         TableColumn<BukuData, String> colJudul = new TableColumn<>("Judul");
-        colJudul.setCellValueFactory(new PropertyValueFactory<>("judul"));
         colJudul.setPrefWidth(200);
+        colJudul.setCellValueFactory(new PropertyValueFactory<>("judul"));
 
         TableColumn<BukuData, String> colPenulis = new TableColumn<>("Penulis");
-        colPenulis.setCellValueFactory(new PropertyValueFactory<>("penulis"));
         colPenulis.setPrefWidth(150);
+        colPenulis.setCellValueFactory(new PropertyValueFactory<>("penulis"));
 
         TableColumn<BukuData, String> colPenerbit = new TableColumn<>("Penerbit");
-        colPenerbit.setCellValueFactory(new PropertyValueFactory<>("penerbit"));
         colPenerbit.setPrefWidth(150);
+        colPenerbit.setCellValueFactory(new PropertyValueFactory<>("penerbit"));
 
         tableBuku.getColumns().addAll(colID, colKategori, colJudul, colPenulis, colPenerbit);
 
-        // Layout Utama
+        // Layout
         VBox centerBox = new VBox(10, form, buttonBox, tableBuku);
         centerBox.setPadding(new Insets(10));
+        this.setCenter(centerBox);
 
-        this.getChildren().add(centerBox);
-
-        // Load Data Awal
-        loadKategori();
+        // Load data buku ke dalam tabel
         loadDataBuku();
 
-        // Event Tombol
-        btnTambah.setOnAction(e -> tambahBuku());
+        // Event listener untuk memilih baris di tabel
+        tableBuku.getSelectionModel().selectedItemProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue != null) {
+                // Ketika baris dipilih, tampilkan data ke form
+                txtIDBuku.setText(String.valueOf(newValue.getIdBuku()));
+                comboKategori.setValue(newValue.getKategori());
+                txtJudul.setText(newValue.getJudul());
+                txtPenulis.setText(newValue.getPenulis());
+                txtPenerbit.setText(newValue.getPenerbit());
+            }
+        });
+
+        // Tombol Reset
+        btnReset.setOnAction(e -> resetForm());
+
+        // Tombol Simpan (untuk menambah atau mengedit buku)
+        btnSimpan.setOnAction(e -> {
+            if (txtIDBuku.getText().isEmpty()) {
+                tambahBuku(); // Menambah buku baru
+            } else {
+                editBuku(); // Mengedit buku yang sudah ada
+            }
+        });
+
+        // Tombol Hapus
         btnHapus.setOnAction(e -> hapusBuku());
-        btnCari.setOnAction(e -> {
+
+        // Aksi tombol Cari
+        btnCari.setOnAction(event -> {
             String keyword = txtCari.getText();
             if (keyword.isEmpty()) {
-                loadDataBuku();
+                loadDataBuku(); // Jika pencarian kosong, tampilkan semua data
             } else {
                 cariBuku(keyword);
             }
         });
     }
 
-    private void loadKategori() {
+    // Method untuk memuat kategori ke ComboBox
+    private void loadKategori(ComboBox<String> comboBox) {
+        ObservableList<String> kategoriList = FXCollections.observableArrayList();
+
+        // Cek apakah koneksi null
         if (connection != null) {
             try {
-                String query = "SELECT nama FROM kategori";
                 Statement stmt = connection.createStatement();
-                ResultSet rs = stmt.executeQuery(query);
+                ResultSet rs = stmt.executeQuery("SELECT nama FROM kategori");
 
                 while (rs.next()) {
-                    cmbKategori.getItems().add(rs.getString("nama"));
+                    kategoriList.add(rs.getString("nama"));
                 }
+
+                comboBox.setItems(kategoriList);
             } catch (SQLException e) {
                 e.printStackTrace();
             }
+        } else {
+            System.out.println("Koneksi database tidak tersedia.");
         }
     }
 
+    // Method untuk memuat data buku ke dalam tabel
     private void loadDataBuku() {
         ObservableList<BukuData> data = FXCollections.observableArrayList();
+
+        // Cek apakah koneksi null
         if (connection != null) {
             try {
-                String query = "SELECT b.id_buku, k.nama AS kategori, b.judul, b.penulis, b.penerbit " +
-                        "FROM buku b " +
-                        "JOIN kategori k ON b.id_kategori = k.id_kategori";
                 Statement stmt = connection.createStatement();
-                ResultSet rs = stmt.executeQuery(query);
+                ResultSet rs = stmt.executeQuery(
+                        "SELECT b.id_buku, k.nama AS kategori, b.judul, b.penulis, b.penerbit " +
+                                "FROM buku b " +
+                                "JOIN kategori k ON b.id_kategori = k.id_kategori");
 
                 while (rs.next()) {
                     data.add(new BukuData(
@@ -132,63 +195,125 @@ public class BukuPanel extends VBox {
                             rs.getString("kategori"),
                             rs.getString("judul"),
                             rs.getString("penulis"),
-                            rs.getString("penerbit")
-                    ));
+                            rs.getString("penerbit")));
                 }
+
                 tableBuku.setItems(data);
             } catch (SQLException e) {
                 e.printStackTrace();
             }
+        } else {
+            System.out.println("Koneksi database tidak tersedia.");
         }
     }
 
+    // Method untuk menambah buku
     private void tambahBuku() {
+        String kategori = comboKategori.getValue();
+        String judul = txtJudul.getText();
+        String penulis = txtPenulis.getText();
+        String penerbit = txtPenerbit.getText();
+
+        // Cek apakah koneksi null
         if (connection != null) {
             try {
-                String query = "INSERT INTO buku (id_kategori, judul, penulis, penerbit) " +
-                        "VALUES ((SELECT id_kategori FROM kategori WHERE nama = ?), ?, ?, ?)";
+                String query = "INSERT INTO buku (id_kategori, judul, penulis, penerbit) VALUES (?, ?, ?, ?)";
                 PreparedStatement stmt = connection.prepareStatement(query);
-                stmt.setString(1, cmbKategori.getValue());
-                stmt.setString(2, txtJudul.getText());
-                stmt.setString(3, txtPenulis.getText());
-                stmt.setString(4, txtPenerbit.getText());
+                stmt.setInt(1, getKategoriId(kategori)); // Mendapatkan ID kategori
+                stmt.setString(2, judul);
+                stmt.setString(3, penulis);
+                stmt.setString(4, penerbit);
 
-                int rowsInserted = stmt.executeUpdate();
-                if (rowsInserted > 0) {
-                    loadDataBuku();
-                }
+                stmt.executeUpdate();
+                loadDataBuku(); // Reload data buku setelah penambahan
+                resetForm(); // Reset form setelah tambah
             } catch (SQLException e) {
                 e.printStackTrace();
             }
         }
     }
 
+    // Method untuk mendapatkan ID kategori berdasarkan nama kategori
+    private int getKategoriId(String kategori) throws SQLException {
+        String query = "SELECT id_kategori FROM kategori WHERE nama = ?";
+        PreparedStatement stmt = connection.prepareStatement(query);
+        stmt.setString(1, kategori);
+        ResultSet rs = stmt.executeQuery();
+
+        if (rs.next()) {
+            return rs.getInt("id_kategori");
+        } else {
+            return -1; // Jika kategori tidak ditemukan
+        }
+    }
+
+    // Method untuk mengedit buku
+    private void editBuku() {
+        int idBuku = Integer.parseInt(txtIDBuku.getText());
+        String kategori = comboKategori.getValue();
+        String judul = txtJudul.getText();
+        String penulis = txtPenulis.getText();
+        String penerbit = txtPenerbit.getText();
+
+        if (connection != null) {
+            try {
+                String query = "UPDATE buku SET id_kategori = ?, judul = ?, penulis = ?, penerbit = ? WHERE id_buku = ?";
+                PreparedStatement stmt = connection.prepareStatement(query);
+                stmt.setInt(1, getKategoriId(kategori)); // Mendapatkan ID kategori
+                stmt.setString(2, judul);
+                stmt.setString(3, penulis);
+                stmt.setString(4, penerbit);
+                stmt.setInt(5, idBuku);
+
+                stmt.executeUpdate();
+                loadDataBuku(); // Reload data buku setelah edit
+                resetForm(); // Reset form setelah edit
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    // Method untuk menghapus buku
     private void hapusBuku() {
-        BukuData selected = tableBuku.getSelectionModel().getSelectedItem();
-        if (selected != null && connection != null) {
+        int idBuku = Integer.parseInt(txtIDBuku.getText());
+
+        if (connection != null) {
             try {
                 String query = "DELETE FROM buku WHERE id_buku = ?";
                 PreparedStatement stmt = connection.prepareStatement(query);
-                stmt.setInt(1, selected.getIdBuku());
+                stmt.setInt(1, idBuku);
 
-                int rowsDeleted = stmt.executeUpdate();
-                if (rowsDeleted > 0) {
-                    loadDataBuku();
-                }
+                stmt.executeUpdate();
+                loadDataBuku(); // Reload data buku setelah hapus
+                resetForm(); // Reset form setelah hapus
             } catch (SQLException e) {
                 e.printStackTrace();
             }
         }
     }
 
+    // Method untuk mereset form
+    private void resetForm() {
+        txtIDBuku.clear();
+        comboKategori.setValue(null);
+        txtJudul.clear();
+        txtPenulis.clear();
+        txtPenerbit.clear();
+        txtCari.clear();
+    }
+
+    // Method untuk mencari buku berdasarkan judul
     private void cariBuku(String keyword) {
         ObservableList<BukuData> data = FXCollections.observableArrayList();
+
+        // Cek apakah koneksi null
         if (connection != null) {
             try {
                 String query = "SELECT b.id_buku, k.nama AS kategori, b.judul, b.penulis, b.penerbit " +
-                        "FROM buku b " +
-                        "JOIN kategori k ON b.id_kategori = k.id_kategori " +
-                        "WHERE b.judul LIKE ?";
+                               "FROM buku b " +
+                               "JOIN kategori k ON b.id_kategori = k.id_kategori " +
+                               "WHERE b.judul LIKE ?";
                 PreparedStatement stmt = connection.prepareStatement(query);
                 stmt.setString(1, "%" + keyword + "%");
                 ResultSet rs = stmt.executeQuery();
@@ -199,9 +324,9 @@ public class BukuPanel extends VBox {
                             rs.getString("kategori"),
                             rs.getString("judul"),
                             rs.getString("penulis"),
-                            rs.getString("penerbit")
-                    ));
+                            rs.getString("penerbit")));
                 }
+
                 tableBuku.setItems(data);
             } catch (SQLException e) {
                 e.printStackTrace();
